@@ -1,35 +1,47 @@
-"""Entry point for the PR Review Bot (Week 1: static rules only, no LLM yet).
+"""Entry point for the PR Review Bot.
 
-Flow: fetch PR files -> parse diffs -> run rule checks -> post inline comments
--> post a summary comment.
+Flow: fetch PR files -> parse diffs -> run rule checks + LLM review -> post
+inline comments -> post a summary comment.
 """
+import os
 from src.github_client import GitHubClient
 from src.diff_parser import parse_pr_files
 from src.rules import run_rules
+from src.llm_review import review_file_diff
 
 
 def main():
     client = GitHubClient.from_env()
+    head_sha = os.environ["HEAD_SHA"]
 
     print(f"Fetching changed files for PR #{client.pr_number} in {client.repo}...")
     raw_files = client.get_pr_files()
     file_diffs = parse_pr_files(raw_files)
     print(f"Parsed {len(file_diffs)} file(s) with diffable changes.")
 
-    import os
-    head_sha = os.environ["HEAD_SHA"]
-
     total_findings = 0
     findings_by_severity = {"info": 0, "warning": 0, "critical": 0}
 
     for file_diff in file_diffs:
-        findings = run_rules(file_diff)
-        for finding in findings:
+        # Rule-based findings (fast, deterministic)
+        rule_findings = run_rules(file_diff)
+        for finding in rule_findings:
             total_findings += 1
             findings_by_severity[finding.severity] += 1
-            comment_body = f"**[{finding.severity.upper()}]** {finding.message}"
             client.post_review_comment(
-                body=comment_body,
+                body=f"**[{finding.severity.upper()}]** {finding.message}",
+                path=file_diff.filename,
+                line=finding.line_number,
+                commit_id=head_sha,
+            )
+
+        # LLM-based findings (context-aware, catches what rules can't)
+        llm_findings = review_file_diff(file_diff)
+        for finding in llm_findings:
+            total_findings += 1
+            findings_by_severity[finding.severity] += 1
+            client.post_review_comment(
+                body=f"**[{finding.severity.upper()}] 🤖 AI Review**\n{finding.message}",
                 path=file_diff.filename,
                 line=finding.line_number,
                 commit_id=head_sha,
@@ -42,7 +54,7 @@ def main():
 
 def build_summary(files_reviewed: int, total_findings: int, by_severity: dict) -> str:
     if total_findings == 0:
-        return "🤖 **PR Review Bot** — reviewed {} file(s), no issues flagged. ✅".format(files_reviewed)
+        return f"🤖 **PR Review Bot** — reviewed {files_reviewed} file(s), no issues flagged. ✅"
 
     lines = [
         f"🤖 **PR Review Bot** — reviewed {files_reviewed} file(s), found {total_findings} issue(s):",
@@ -51,7 +63,7 @@ def build_summary(files_reviewed: int, total_findings: int, by_severity: dict) -
         f"- 🟡 Warning: {by_severity['warning']}",
         f"- 🔵 Info: {by_severity['info']}",
         "",
-        "_This is currently rule-based static analysis. LLM-powered review lands in Week 2._",
+        "_Static rules + AI-powered review (Groq/Llama 3.3)._",
     ]
     return "\n".join(lines)
 
