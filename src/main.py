@@ -4,10 +4,22 @@ Flow: fetch PR files -> parse diffs -> run rule checks + LLM review -> post
 inline comments -> post a summary comment.
 """
 import os
+from dotenv import load_dotenv
+load_dotenv()
+
 from src.github_client import GitHubClient
 from src.diff_parser import parse_pr_files
 from src.rules import run_rules
 from src.llm_review import review_file_diff
+
+
+BOT_OWN_SOURCE_PREFIXES = ("src/", ".github/workflows/")
+
+
+def _is_bot_own_source(filename: str) -> bool:
+    """Skip reviewing the bot's own implementation files — reviewing its own
+    source alongside target code adds noise and isn't the point of the tool."""
+    return filename.startswith(BOT_OWN_SOURCE_PREFIXES)
 
 
 def main():
@@ -17,7 +29,8 @@ def main():
     print(f"Fetching changed files for PR #{client.pr_number} in {client.repo}...")
     raw_files = client.get_pr_files()
     file_diffs = parse_pr_files(raw_files)
-    print(f"Parsed {len(file_diffs)} file(s) with diffable changes.")
+    file_diffs = [fd for fd in file_diffs if not _is_bot_own_source(fd.filename)]
+    print(f"Parsed {len(file_diffs)} file(s) with diffable changes (bot's own source excluded).")
 
     total_findings = 0
     findings_by_severity = {"info": 0, "warning": 0, "critical": 0}
