@@ -11,6 +11,7 @@ from src.github_client import GitHubClient
 from src.diff_parser import parse_pr_files
 from src.rules import run_rules
 from src.llm_review import review_file_diff
+from src.security_review import security_review_file_diff
 
 
 BOT_OWN_SOURCE_PREFIXES = ("src/", ".github/workflows/")
@@ -33,6 +34,7 @@ def main():
     print(f"Parsed {len(file_diffs)} file(s) with diffable changes (bot's own source excluded).")
 
     total_findings = 0
+    total_security_findings = 0
     findings_by_severity = {"info": 0, "warning": 0, "critical": 0}
 
     for file_diff in file_diffs:
@@ -60,12 +62,25 @@ def main():
                 commit_id=head_sha,
             )
 
-    summary = build_summary(len(file_diffs), total_findings, findings_by_severity)
+        # Dedicated security pass (separate prompt, lower bar for flagging)
+        security_findings = security_review_file_diff(file_diff)
+        for finding in security_findings:
+            total_findings += 1
+            total_security_findings += 1
+            findings_by_severity[finding.severity] += 1
+            client.post_review_comment(
+                body=f"**[{finding.severity.upper()}] 🔒 Security Scan — {finding.vuln_class}**\n{finding.message}",
+                path=file_diff.filename,
+                line=finding.line_number,
+                commit_id=head_sha,
+            )
+
+    summary = build_summary(len(file_diffs), total_findings, total_security_findings, findings_by_severity)
     client.post_summary_comment(summary)
     print("Review complete.")
 
 
-def build_summary(files_reviewed: int, total_findings: int, by_severity: dict) -> str:
+def build_summary(files_reviewed: int, total_findings: int, total_security_findings: int, by_severity: dict) -> str:
     if total_findings == 0:
         return f"🤖 **PR Review Bot** — reviewed {files_reviewed} file(s), no issues flagged. ✅"
 
@@ -75,8 +90,9 @@ def build_summary(files_reviewed: int, total_findings: int, by_severity: dict) -
         f"- 🔴 Critical: {by_severity['critical']}",
         f"- 🟡 Warning: {by_severity['warning']}",
         f"- 🔵 Info: {by_severity['info']}",
+        f"- 🔒 Security-specific: {total_security_findings}",
         "",
-        "_Static rules + AI-powered review (Groq/Llama 3.3)._",
+        "_Static rules + AI review + dedicated security scan (Groq/Llama 3.3)._",
     ]
     return "\n".join(lines)
 
