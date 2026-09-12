@@ -9,7 +9,6 @@ import os
 import requests
 from dataclasses import dataclass
 from src.diff_parser import FileDiff
-from src.rag_index import RepoIndex, RetrievedChunk
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 MODEL = "llama-3.3-70b-versatile"
@@ -21,18 +20,6 @@ You will be given a filename and a set of ADDED lines from a diff (only new/chan
 - Security vulnerabilities (injection, unsafe deserialization, auth issues, etc.)
 - Poor error handling
 - Code that will likely cause issues in production
-
-You may be given a "Related code from this repository" section before the diff.
-That section is EXISTING code elsewhere in the repo, retrieved because it's
-semantically related to the file under review — it is NOT part of this PR and
-you must not flag issues within it directly. Use it only to:
-- check whether the diff is consistent with existing patterns/conventions in the repo
-- avoid false positives (e.g. don't assume something is unsafe if related code
-  elsewhere shows it's already validated/wrapped/configured correctly)
-- notice if the diff duplicates logic that already exists elsewhere
-
-If no related code section is present, or it isn't relevant to a specific
-finding, review the diff on its own merits as before.
 
 Do NOT comment on style, formatting, or missing tests unless they represent a real risk.
 Do NOT invent issues — if the code looks fine, return an empty findings list.
@@ -50,34 +37,14 @@ class LLMFinding:
     severity: str
 
 
-def _format_retrieved_context(retrieved: list[RetrievedChunk]) -> str:
-    if not retrieved:
-        return ""
-    blocks = [f"# {r.chunk.header}\n{r.chunk.content}" for r in retrieved]
-    return (
-        "Related code from this repository (for context only — do not review this directly):\n\n"
-        + "\n\n---\n\n".join(blocks)
-        + "\n\n"
-    )
-
-
-def _build_user_prompt(file_diff: FileDiff, repo_index: RepoIndex | None = None) -> str:
+def _build_user_prompt(file_diff: FileDiff) -> str:
     lines_block = "\n".join(
         f"{added.line_number}: {added.content}" for added in file_diff.added_lines
     )
-    context_block = ""
-    if repo_index is not None:
-        query_text = "\n".join(added.content for added in file_diff.added_lines)
-        retrieved = repo_index.retrieve(query_text, k=3, exclude_filename=file_diff.filename)
-        context_block = _format_retrieved_context(retrieved)
-    return f"{context_block}Filename: {file_diff.filename}\n\nAdded lines:\n{lines_block}"
+    return f"Filename: {file_diff.filename}\n\nAdded lines:\n{lines_block}"
 
 
-def review_file_diff(
-    file_diff: FileDiff,
-    api_key: str | None = None,
-    repo_index: RepoIndex | None = None,
-) -> list[LLMFinding]:
+def review_file_diff(file_diff: FileDiff, api_key: str | None = None) -> list[LLMFinding]:
     """Send a file's added lines to Groq for LLM review. Returns [] on any failure
     or if there's nothing to review — this layer should never crash the pipeline."""
     if not file_diff.added_lines:
@@ -92,7 +59,7 @@ def review_file_diff(
         "model": MODEL,
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": _build_user_prompt(file_diff, repo_index)},
+            {"role": "user", "content": _build_user_prompt(file_diff)},
         ],
         "temperature": 0.2,
         "response_format": {"type": "json_object"},
