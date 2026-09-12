@@ -101,7 +101,7 @@ def build_summary(files_reviewed: int, total_findings: int, total_security_findi
         f"- 🔵 Info: {by_severity['info']}",
         f"- 🔒 Security-specific: {total_security_findings}",
         "",
-        "_Static rules + AI review (RAG-grounded) + dedicated security scan (Groq/Llama 3.3)._",
+        "_Static rules + AI review (RAG-grounded) + dedicated security scan (Groq/GPT-OSS-120B)._",
     ]
     return "\n".join(lines)
 
