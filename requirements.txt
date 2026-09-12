@@ -1,2 +1,8 @@
 requests>=2.31.0
 python-dotenv>=1.0.0
+sentence-transformers
+faiss-cpu # Not gpu since this runs on a GitHub Actions runner
+tree-sitter
+tree-sitter-python
+tree-sitter-javascript
+tree-sitter-typescript
