@@ -12,7 +12,7 @@ from src.diff_parser import FileDiff
 from src.rag_index import RepoIndex, RetrievedChunk
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
-MODEL = "llama-3.3-70b-versatile"
+MODEL = "openai/gpt-oss-120b"
 
 SECURITY_SYSTEM_PROMPT = """You are a security-focused static analysis engine performing a
 dedicated security review of added lines in a pull request diff. This is a SEPARATE,

@@ -12,7 +12,7 @@ from src.diff_parser import FileDiff
 from src.rag_index import RepoIndex, RetrievedChunk
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
-MODEL = "llama-3.3-70b-versatile"
+MODEL = "openai/gpt-oss-120b"
 
 SYSTEM_PROMPT = """You are an expert code reviewer performing an automated pull request review.
 
