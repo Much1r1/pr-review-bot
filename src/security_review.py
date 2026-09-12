@@ -9,6 +9,7 @@ import os
 import requests
 from dataclasses import dataclass
 from src.diff_parser import FileDiff
+from src.rag_index import RepoIndex, RetrievedChunk
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 MODEL = "openai/gpt-oss-120b"
@@ -26,6 +27,14 @@ Check specifically for these vulnerability classes:
 - SSRF: outbound requests built from unsanitized user input
 - Insecure cryptography: weak hashing (MD5/SHA1 for passwords), predictable randomness (random instead of secrets), non-constant-time comparisons for secrets
 - Missing input validation on data that flows into a sensitive sink
+
+You may be given a "Related code from this repository" section before the diff.
+That section is EXISTING code elsewhere in the repo — NOT part of this PR. Use
+it only to check whether an apparent vulnerability is already mitigated
+elsewhere (e.g. a session-level TLS config, an existing sanitization wrapper)
+before flagging it. Do not review the related-code section directly, and
+security findings must still favor flagging when uncertain — the related
+context should raise your confidence bar for a finding, not silence it.
 
 Only flag something if it is demonstrably true from the exact lines shown — do not assume
 library defaults or behavior not visible in the code. Because false negatives on real
@@ -48,14 +57,34 @@ class SecurityFinding:
     vuln_class: str
 
 
-def _build_user_prompt(file_diff: FileDiff) -> str:
+def _format_retrieved_context(retrieved: list[RetrievedChunk]) -> str:
+    if not retrieved:
+        return ""
+    blocks = [f"# {r.chunk.header}\n{r.chunk.content}" for r in retrieved]
+    return (
+        "Related code from this repository (for context only — do not review this directly):\n\n"
+        + "\n\n---\n\n".join(blocks)
+        + "\n\n"
+    )
+
+
+def _build_user_prompt(file_diff: FileDiff, repo_index: RepoIndex | None = None) -> str:
     lines_block = "\n".join(
         f"{added.line_number}: {added.content}" for added in file_diff.added_lines
     )
-    return f"Filename: {file_diff.filename}\n\nAdded lines:\n{lines_block}"
+    context_block = ""
+    if repo_index is not None:
+        query_text = "\n".join(added.content for added in file_diff.added_lines)
+        retrieved = repo_index.retrieve(query_text, k=3, exclude_filename=file_diff.filename)
+        context_block = _format_retrieved_context(retrieved)
+    return f"{context_block}Filename: {file_diff.filename}\n\nAdded lines:\n{lines_block}"
 
 
-def security_review_file_diff(file_diff: FileDiff, api_key: str | None = None) -> list[SecurityFinding]:
+def security_review_file_diff(
+    file_diff: FileDiff,
+    api_key: str | None = None,
+    repo_index: RepoIndex | None = None,
+) -> list[SecurityFinding]:
     """Run the dedicated security pass on a file's added lines. Returns [] on any
     failure or if there's nothing to review — never crashes the pipeline."""
     if not file_diff.added_lines:
@@ -70,7 +99,7 @@ def security_review_file_diff(file_diff: FileDiff, api_key: str | None = None) -
         "model": MODEL,
         "messages": [
             {"role": "system", "content": SECURITY_SYSTEM_PROMPT},
-            {"role": "user", "content": _build_user_prompt(file_diff)},
+            {"role": "user", "content": _build_user_prompt(file_diff, repo_index)},
         ],
         "temperature": 0.1,
         "response_format": {"type": "json_object"},
