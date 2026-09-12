@@ -1,11 +1,9 @@
 """Entry point for the PR Review Bot.
 
-Flow: fetch PR files -> parse diffs -> build repo RAG index -> run rule
-checks + LLM review (context-grounded via retrieval) -> post inline
-comments -> post a summary comment.
+Flow: fetch PR files -> parse diffs -> run rule checks + LLM review -> post
+inline comments -> post a summary comment.
 """
 import os
-from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -14,8 +12,6 @@ from src.diff_parser import parse_pr_files
 from src.rules import run_rules
 from src.llm_review import review_file_diff
 from src.security_review import security_review_file_diff
-from src.code_chunker import chunk_repo
-from src.rag_index import build_repo_index
 
 
 BOT_OWN_SOURCE_PREFIXES = ("src/", ".github/workflows/")
@@ -37,11 +33,6 @@ def main():
     file_diffs = [fd for fd in file_diffs if not _is_bot_own_source(fd.filename)]
     print(f"Parsed {len(file_diffs)} file(s) with diffable changes (bot's own source excluded).")
 
-    print("Building repo-wide RAG index (ephemeral, this run only)...")
-    repo_chunks = chunk_repo(Path("."))
-    repo_index = build_repo_index(repo_chunks)
-    print(f"Indexed {len(repo_chunks)} code chunk(s) for retrieval.")
-
     total_findings = 0
     total_security_findings = 0
     findings_by_severity = {"info": 0, "warning": 0, "critical": 0}
@@ -60,7 +51,7 @@ def main():
             )
 
         # LLM-based findings (context-aware, catches what rules can't)
-        llm_findings = review_file_diff(file_diff, repo_index=repo_index)
+        llm_findings = review_file_diff(file_diff)
         for finding in llm_findings:
             total_findings += 1
             findings_by_severity[finding.severity] += 1
@@ -72,7 +63,7 @@ def main():
             )
 
         # Dedicated security pass (separate prompt, lower bar for flagging)
-        security_findings = security_review_file_diff(file_diff, repo_index=repo_index)
+        security_findings = security_review_file_diff(file_diff)
         for finding in security_findings:
             total_findings += 1
             total_security_findings += 1
@@ -101,7 +92,7 @@ def build_summary(files_reviewed: int, total_findings: int, total_security_findi
         f"- 🔵 Info: {by_severity['info']}",
         f"- 🔒 Security-specific: {total_security_findings}",
         "",
-        "_Static rules + AI review (RAG-grounded) + dedicated security scan (Groq/Llama 3.3)._",
+        "_Static rules + AI review + dedicated security scan (Groq/Llama 3.3)._",
     ]
     return "\n".join(lines)
 
