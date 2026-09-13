@@ -1,4 +1,5 @@
-requests>=2.31.0
+requests>=2.19.0
+pyyaml==5.1
 python-dotenv>=1.0.0
 sentence-transformers
 faiss-cpu # Not gpu since this runs on a GitHub Actions runner
