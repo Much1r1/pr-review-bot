@@ -6,6 +6,7 @@ as rules.Finding so main.py can treat rule-based and LLM findings uniformly.
 """
 import json
 import os
+import time
 import requests
 from dataclasses import dataclass
 from src.diff_parser import FileDiff
@@ -13,6 +14,8 @@ from src.rag_index import RepoIndex, RetrievedChunk
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 MODEL = "openai/gpt-oss-120b"
+MAX_RETRIES = 3
+BASE_BACKOFF_SECONDS = 5
 
 SYSTEM_PROMPT = """You are an expert code reviewer performing an automated pull request review.
 
@@ -73,6 +76,21 @@ def _build_user_prompt(file_diff: FileDiff, repo_index: RepoIndex | None = None)
     return f"{context_block}Filename: {file_diff.filename}\n\nAdded lines:\n{lines_block}"
 
 
+def _post_with_retry(payload: dict, headers: dict) -> requests.Response | None:
+    """POST to Groq with retry/backoff on 429 (rate limit). Honors Retry-After
+    when Groq sends one; otherwise falls back to exponential backoff.
+    Returns None if all retries are exhausted."""
+    for attempt in range(MAX_RETRIES):
+        resp = requests.post(GROQ_API_URL, headers=headers, json=payload, timeout=30)
+        if resp.status_code != 429:
+            return resp
+        retry_after = resp.headers.get("Retry-After")
+        wait = float(retry_after) if retry_after else BASE_BACKOFF_SECONDS * (2 ** attempt)
+        print(f"Rate limited by Groq (attempt {attempt + 1}/{MAX_RETRIES}), waiting {wait}s...")
+        time.sleep(wait)
+    return None
+
+
 def review_file_diff(
     file_diff: FileDiff,
     api_key: str | None = None,
@@ -103,7 +121,10 @@ def review_file_diff(
     }
 
     try:
-        resp = requests.post(GROQ_API_URL, headers=headers, json=payload, timeout=30)
+        resp = _post_with_retry(payload, headers)
+        if resp is None:
+            print(f"Warning: LLM review rate-limited out for {file_diff.filename} after {MAX_RETRIES} retries.")
+            return []
         resp.raise_for_status()
         content = resp.json()["choices"][0]["message"]["content"]
         parsed = json.loads(content)
