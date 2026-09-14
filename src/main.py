@@ -38,7 +38,7 @@ def run():
     raw_files = client.get_pr_files()
     file_diffs = [
         fd for fd in parse_pr_files(raw_files)
-        if not fd.filename.startswith(("src/", ".github/workflows/"))
+        if not fd.filename.startswith(("src/", ".github/workflows/", "convex/", "dashboard/"))
     ]
 
     if not file_diffs:
