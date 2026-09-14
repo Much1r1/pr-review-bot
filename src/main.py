@@ -5,6 +5,7 @@ critical finding fails the Action step (there's no separate status API call).
 """
 import os
 import sys
+import time
 from pathlib import Path
 
 from src.github_client import GitHubClient
@@ -17,6 +18,11 @@ from src.security_review import security_review_file_diff
 from src.dependency_check import check_dependencies
 
 SEVERITY_ORDER = {"critical": 0, "high": 1, "warning": 2, "info": 3}
+
+# Groq's openai/gpt-oss-120b free tier is capped at 8K tokens/minute — spacing
+# calls out avoids back-to-back review+security calls (per file) landing in
+# the same TPM window and burning the retry budget on avoidable 429s.
+INTER_CALL_DELAY_SECONDS = 15
 
 
 def _severity_rank(sev: str) -> int:
@@ -61,6 +67,8 @@ def run():
                 "source": "review",
             })
 
+        time.sleep(INTER_CALL_DELAY_SECONDS)
+
         for finding in security_review_file_diff(fd, api_key=groq_api_key, repo_index=repo_index):
             any_critical = any_critical or finding.severity == "critical"
             all_comments.append({
@@ -68,6 +76,9 @@ def run():
                 "body": f"🔒 Security [{finding.vuln_class}]: {finding.message}",
                 "severity": finding.severity, "source": "security",
             })
+
+        if fd is not file_diffs[-1]:
+            time.sleep(INTER_CALL_DELAY_SECONDS)
 
     # one pass over all files, not per-file — OSV gives no line number, so
     # these findings are summary-only, never posted as inline comments
