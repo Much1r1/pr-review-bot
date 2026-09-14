@@ -10,6 +10,14 @@ inputs:
     description: 'Token used to fetch the PR diff and post comments. Defaults to the calling workflow''s GITHUB_TOKEN.'
     required: false
     default: ${{ github.token }}
+  convex-url:
+    description: 'Convex deployment URL for persisting findings.'
+    required: false
+    default: ''
+  convex-deploy-key:
+    description: 'Convex deploy key or auth token.'
+    required: false
+    default: ''
 
 runs:
   using: 'composite'
@@ -45,5 +53,7 @@ runs:
         REPO: ${{ github.repository }}
         BASE_SHA: ${{ github.event.pull_request.base.sha }}
         HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        CONVEX_URL: ${{ inputs.convex-url }}
+        CONVEX_DEPLOY_KEY: ${{ inputs.convex-deploy-key }}
         PYTHONPATH: ${{ github.workspace }}/.pr-review-bot
       run: python -m src.main

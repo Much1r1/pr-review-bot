@@ -16,6 +16,7 @@ from src.code_chunker import chunk_repo
 from src.llm_review import review_file_diff
 from src.security_review import security_review_file_diff
 from src.dependency_check import check_dependencies
+from src.convex_client import persist_run
 
 SEVERITY_ORDER = {"critical": 0, "high": 1, "warning": 2, "info": 3}
 
@@ -100,6 +101,17 @@ def run():
 
     everything = sorted(all_comments + dep_comments, key=lambda c: _severity_rank(c["severity"]))
     client.post_summary_comment(_build_summary(everything, any_critical))
+
+    # Persist run and findings to Convex
+    repo = os.environ.get("REPO", "unknown/repo")
+    pr_number = int(os.environ.get("PR_NUMBER", "0"))
+    persist_run(
+        repo=repo,
+        pr_number=pr_number,
+        head_sha=head_sha,
+        all_comments=everything,
+        any_critical=any_critical,
+    )
 
     if any_critical:
         print("Critical finding(s) present — failing check.")
