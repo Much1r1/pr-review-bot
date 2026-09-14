@@ -1,0 +1,49 @@
+name: 'PR Review Bot'
+description: 'AI-augmented PR review: static checks, RAG-backed LLM review, dedicated security pass, and OSV dependency-advisory check.'
+author: 'Much1r1'
+
+inputs:
+  groq-api-key:
+    description: 'Groq API key (free tier) used for the LLM review and security passes.'
+    required: true
+  github-token:
+    description: 'Token used to fetch the PR diff and post comments. Defaults to the calling workflow''s GITHUB_TOKEN.'
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout PR branch
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
+        fetch-depth: 0
+
+    - name: Checkout pr-review-bot source
+      uses: actions/checkout@v4
+      with:
+        repository: Much1r1/pr-review-bot
+        path: .pr-review-bot
+        ref: main
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      shell: bash
+      run: pip install -r .pr-review-bot/requirements.txt
+
+    - name: Run review bot
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        GROQ_API_KEY: ${{ inputs.groq-api-key }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        REPO: ${{ github.repository }}
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        PYTHONPATH: ${{ github.workspace }}/.pr-review-bot
+      run: python -m src.main
