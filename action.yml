@@ -17,6 +17,7 @@ inputs:
   convex-deploy-key:
     description: 'Convex deploy key or auth token.'
     required: false
+    secret: true
     default: ''
 
 runs:
@@ -43,6 +44,19 @@ runs:
     - name: Install dependencies
       shell: bash
       run: pip install -r .pr-review-bot/requirements.txt
+
+    - name: Validate CONVEX_URL
+      shell: bash
+      env:
+        CONVEX_URL: ${{ inputs.convex-url }}
+      run: |
+        if [ -n "$CONVEX_URL" ]; then
+          CLEAN_URL="${CONVEX_URL%/}"
+          if [[ ! "$CLEAN_URL" =~ \.convex\.cloud$ ]]; then
+            echo "::error::Invalid CONVEX_URL domain: '$CONVEX_URL'. Must end in .convex.cloud"
+            exit 1
+          fi
+        fi
 
     - name: Run review bot
       shell: bash

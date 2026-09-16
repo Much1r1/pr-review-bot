@@ -57,14 +57,14 @@ class TestConvexClient(unittest.TestCase):
             all_comments=comments,
             any_critical=True,
             convex_url="https://happy-animal-123.convex.cloud",
-            deploy_key="dev:token123",
+            deploy_key="dev:FAKE_TOKEN_FOR_TESTS_DO_NOT_USE",
         )
 
         self.assertEqual(result, "run_id_999")
         mock_post.assert_called_once()
         call_kwargs = mock_post.call_args[1]
         self.assertEqual(
-            call_kwargs["headers"]["Authorization"], "Bearer dev:token123"
+            call_kwargs["headers"]["Authorization"], "Bearer dev:FAKE_TOKEN_FOR_TESTS_DO_NOT_USE"
         )
         payload = call_kwargs["json"]
         self.assertEqual(payload["path"], "runs:saveRunAndFindings")
