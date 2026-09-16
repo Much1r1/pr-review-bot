@@ -179,7 +179,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({ data }) => {
                     name="Security"
                     stroke="#e11d48"
                     fillOpacity={1}
-                    fill="url(#colorSecurity)"
+                    fill={`url(#${idSecurity})`}
                     stackId="1"
                   />
                   <Area
@@ -188,7 +188,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({ data }) => {
                     name="Dependency"
                     stroke="#a855f7"
                     fillOpacity={1}
-                    fill="url(#colorDep)"
+                    fill={`url(#${idDep})`}
                     stackId="1"
                   />
                   <Area
@@ -197,7 +197,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({ data }) => {
                     name="Code Review"
                     stroke="#6366f1"
                     fillOpacity={1}
-                    fill="url(#colorReview)"
+                    fill={`url(#${idReview})`}
                     stackId="1"
                   />
                 </>
