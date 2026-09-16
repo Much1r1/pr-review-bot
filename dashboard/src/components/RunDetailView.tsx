@@ -61,8 +61,8 @@ export const RunDetailView: React.FC<RunDetailViewProps> = ({
     }
   };
 
-  const getSeverityBadge = (severity: string) => {
-    switch (severity.toLowerCase()) {
+  const getSeverityBadge = (severity?: string | null) => {
+    switch ((severity || 'info').toLowerCase()) {
       case 'critical':
         return (
           <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider bg-rose-600 text-white">
@@ -92,10 +92,15 @@ export const RunDetailView: React.FC<RunDetailViewProps> = ({
     }
   };
 
-  const formattedDate = new Date(run.timestamp).toLocaleString('en-US', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
+  const safeFindings = findings || [];
+  const safeHeadSha = run.head_sha ? run.head_sha : 'unknown';
+
+  const formattedDate = run.timestamp
+    ? new Date(run.timestamp).toLocaleString('en-US', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      })
+    : 'Unknown Date';
 
   return (
     <div className="bg-slate-900/90 backdrop-blur-2xl border border-indigo-500/30 rounded-2xl p-6 shadow-2xl relative">
@@ -125,7 +130,7 @@ export const RunDetailView: React.FC<RunDetailViewProps> = ({
               <span>{formattedDate}</span>
             </span>
             <span>•</span>
-            <span>SHA: {run.head_sha}</span>
+            <span>SHA: {safeHeadSha}</span>
           </div>
         </div>
 
@@ -137,7 +142,7 @@ export const RunDetailView: React.FC<RunDetailViewProps> = ({
             </span>
           )}
           <span className="px-3 py-1.5 bg-slate-800 text-slate-200 text-xs font-bold rounded-lg font-mono">
-            {findings.length} Finding{findings.length === 1 ? '' : 's'} Logged
+            {safeFindings.length} Finding{safeFindings.length === 1 ? '' : 's'} Logged
           </span>
         </div>
       </div>
@@ -149,12 +154,12 @@ export const RunDetailView: React.FC<RunDetailViewProps> = ({
           <span>Detailed Findings & Flagged Code</span>
         </h3>
 
-        {findings.length === 0 ? (
+        {safeFindings.length === 0 ? (
           <div className="p-8 text-center bg-slate-950/50 rounded-xl border border-slate-800 text-slate-400 text-sm">
             ✅ Clean run — No automated flags or vulnerabilities detected for this PR.
           </div>
         ) : (
-          findings.map((finding) => (
+          safeFindings.map((finding) => (
             <div
               key={finding._id}
               className="bg-slate-950/70 border border-slate-800 rounded-xl p-4 shadow-inner space-y-3 hover:border-slate-700 transition-colors"

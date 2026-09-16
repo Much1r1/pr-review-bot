@@ -39,7 +39,7 @@ export const StatCard: React.FC<StatCardProps> = ({
     },
   };
 
-  const style = variantStyles[variant];
+  const style = variantStyles[variant] || variantStyles.default;
 
   return (
     <div

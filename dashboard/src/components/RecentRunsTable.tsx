@@ -86,7 +86,7 @@ export const RecentRunsTable: React.FC<RecentRunsTableProps> = ({
                       </div>
                     </td>
                     <td className="py-4 px-5 font-mono text-slate-400">
-                      {run.head_sha.substring(0, 7)}
+                      {run.head_sha ? run.head_sha.substring(0, 7) : 'unknown'}
                     </td>
                     <td className="py-4 px-5">
                       {run.any_critical ? (
