@@ -27,6 +27,16 @@ export const saveRunAndFindings = mutation({
   },
   handler: async (ctx, args) => {
     const timestamp = args.timestamp ?? Date.now();
+
+    // Optional auth validation if CONVEX_AUTH_SECRET environment variable is configured in Convex deployment
+    const authSecret = process.env.CONVEX_AUTH_SECRET;
+    if (authSecret) {
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) {
+        throw new Error("Unauthorized: Mutation requires authentication.");
+      }
+    }
+
     const runId = await ctx.db.insert("runs", {
       repo: args.repo,
       pr_number: args.pr_number,
@@ -36,16 +46,27 @@ export const saveRunAndFindings = mutation({
       any_critical: args.any_critical,
     });
 
-    for (const f of args.findings) {
-      await ctx.db.insert("findings", {
-        run_id: runId,
-        category: f.category,
-        severity: f.severity,
-        file: f.file,
-        line: f.line,
-        message: f.message,
-        code_snippet: f.code_snippet,
-      });
+    const insertedFindingIds: Array<any> = [];
+    try {
+      for (const f of args.findings) {
+        const findingId = await ctx.db.insert("findings", {
+          run_id: runId,
+          category: f.category,
+          severity: f.severity,
+          file: f.file,
+          line: f.line,
+          message: f.message,
+          code_snippet: f.code_snippet,
+        });
+        insertedFindingIds.push(findingId);
+      }
+    } catch (err) {
+      // Roll back insertions on failure to avoid orphaned runs
+      for (const fid of insertedFindingIds) {
+        await ctx.db.delete(fid);
+      }
+      await ctx.db.delete(runId);
+      throw new Error(`Failed to insert findings for run: ${err instanceof Error ? err.message : String(err)}`);
     }
 
     return runId;
@@ -312,7 +333,7 @@ export const seedDemoData = mutation({
     });
 
     // Run 4: Much1r1/e-commerce-api - PR #48 (Dependency patch)
-    const run4Id = await ctx.db.insert("runs", {
+    await ctx.db.insert("runs", {
       repo: "Much1r1/e-commerce-api",
       pr_number: 48,
       head_sha: "8a7b6c5d4e3f2109876543210987654321098a7b",

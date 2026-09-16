@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useId } from 'react';
 import {
   AreaChart,
   Area,
@@ -8,7 +8,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { TrendingUp, ShieldAlert, Bug, PackageCheck } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 
 interface TrendItem {
   dateStr: string;
@@ -29,6 +29,15 @@ interface TrendChartProps {
 
 export const TrendChart: React.FC<TrendChartProps> = ({ data }) => {
   const [groupBy, setGroupBy] = useState<'severity' | 'category'>('severity');
+  const baseId = useId().replace(/:/g, '');
+
+  const idCritical = `colorCritical_${baseId}`;
+  const idHigh = `colorHigh_${baseId}`;
+  const idWarning = `colorWarning_${baseId}`;
+  const idInfo = `colorInfo_${baseId}`;
+  const idSecurity = `colorSecurity_${baseId}`;
+  const idReview = `colorReview_${baseId}`;
+  const idDep = `colorDep_${baseId}`;
 
   return (
     <div className="bg-slate-900/60 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 shadow-xl">
@@ -77,33 +86,33 @@ export const TrendChart: React.FC<TrendChartProps> = ({ data }) => {
             <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 {/* Severity Gradients */}
-                <linearGradient id="colorCritical" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={idCritical} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.8} />
                   <stop offset="95%" stopColor="#f43f5e" stopOpacity={0.0} />
                 </linearGradient>
-                <linearGradient id="colorHigh" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={idHigh} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#f97316" stopOpacity={0.8} />
                   <stop offset="95%" stopColor="#f97316" stopOpacity={0.0} />
                 </linearGradient>
-                <linearGradient id="colorWarning" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={idWarning} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#eab308" stopOpacity={0.8} />
                   <stop offset="95%" stopColor="#eab308" stopOpacity={0.0} />
                 </linearGradient>
-                <linearGradient id="colorInfo" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={idInfo} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
                   <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0} />
                 </linearGradient>
 
                 {/* Category Gradients */}
-                <linearGradient id="colorSecurity" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={idSecurity} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#e11d48" stopOpacity={0.8} />
                   <stop offset="95%" stopColor="#e11d48" stopOpacity={0.0} />
                 </linearGradient>
-                <linearGradient id="colorReview" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={idReview} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#6366f1" stopOpacity={0.8} />
                   <stop offset="95%" stopColor="#6366f1" stopOpacity={0.0} />
                 </linearGradient>
-                <linearGradient id="colorDep" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={idDep} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#a855f7" stopOpacity={0.8} />
                   <stop offset="95%" stopColor="#a855f7" stopOpacity={0.0} />
                 </linearGradient>
@@ -131,7 +140,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({ data }) => {
                     name="Critical"
                     stroke="#f43f5e"
                     fillOpacity={1}
-                    fill="url(#colorCritical)"
+                    fill={`url(#${idCritical})`}
                     stackId="1"
                   />
                   <Area
@@ -140,7 +149,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({ data }) => {
                     name="High"
                     stroke="#f97316"
                     fillOpacity={1}
-                    fill="url(#colorHigh)"
+                    fill={`url(#${idHigh})`}
                     stackId="1"
                   />
                   <Area
@@ -149,7 +158,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({ data }) => {
                     name="Warning"
                     stroke="#eab308"
                     fillOpacity={1}
-                    fill="url(#colorWarning)"
+                    fill={`url(#${idWarning})`}
                     stackId="1"
                   />
                   <Area
@@ -158,7 +167,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({ data }) => {
                     name="Info"
                     stroke="#3b82f6"
                     fillOpacity={1}
-                    fill="url(#colorInfo)"
+                    fill={`url(#${idInfo})`}
                     stackId="1"
                   />
                 </>

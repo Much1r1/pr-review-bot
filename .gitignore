@@ -1,5 +1,11 @@
 __pycache__/
 *.pyc
 .env
-.venv/test_llm.py
-test_llm.py
+.venv/
+node_modules/
+dashboard/node_modules/
+_generated/
+dashboard/dist/
+dist/
+build/
+*.log

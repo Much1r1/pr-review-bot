@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../convex/_generated/api';
 import {
@@ -7,10 +7,7 @@ import {
   Activity,
   Layers,
   Sparkles,
-  RefreshCw,
-  Search,
   Github,
-  AlertOctagon,
 } from 'lucide-react';
 import { RepoSelector } from './components/RepoSelector';
 import { StatCard } from './components/StatCard';
@@ -25,18 +22,19 @@ export default function App() {
   const [seedStatus, setSeedStatus] = useState<string | null>(null);
 
   // Queries directly from Convex
-  const repos = useQuery(api.runs.listRepos) || [];
-  const runs = (useQuery(api.runs.listRuns, { repo: selectedRepo }) || []) as RunItem[];
-  const trendData = useQuery(api.runs.getTrendData, { repo: selectedRepo }) || [];
+  const runsApi = (api as any).runs;
+  const repos = (useQuery(runsApi.listRepos) || []) as string[];
+  const runs = (useQuery(runsApi.listRuns, { repo: selectedRepo }) || []) as RunItem[];
+  const trendData = (useQuery(runsApi.getTrendData, { repo: selectedRepo }) || []) as any[];
 
   // Selected run details
   const selectedRunDetails = useQuery(
-    api.runs.getRunDetails,
+    runsApi.getRunDetails,
     selectedRunId ? { run_id: selectedRunId as any } : 'skip'
-  );
+  ) as any;
 
   // Mutations
-  const seedDemoData = useMutation(api.runs.seedDemoData);
+  const seedDemoData = useMutation(runsApi.seedDemoData);
 
   const handleSeed = async () => {
     setSeeding(true);
