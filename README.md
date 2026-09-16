@@ -16,7 +16,7 @@ problems before merge.
   the LLM reviews each file with actual project context, not just the diff
   in isolation
 - ⬜ Week 3 — Dedicated security-pattern pass
-- ⬜ Week 4 — React/Convex dashboard for repo-wide trends
+- ✅ Week 4 — React/Convex dashboard for repo-wide trends
 - ⬜ Reusable GitHub Action — currently runs only within this repo; packaging
   as a portable Action (`action.yml`, referenced via `uses:` from other repos)
   is planned next
@@ -50,6 +50,14 @@ you want automated PR review. Requires:
 > Note: the workflow and bot source currently only work when copied into
 > the target repo directly (no hosted service, no reusable Action yet).
 
+## Dashboard Screenshots
+
+### Overview & Findings Trend
+![PR Review Bot Dashboard](docs/screenshot-dashboard.png)
+
+### Run Findings Drill-down
+![PR Review Bot Run Drilldown](docs/screenshot-drilldown.png)
+
 ## Architecture
 
 ```
@@ -60,6 +68,12 @@ src/
   repo_index.py         # Builds the ephemeral RAG index (chunking, embedding, FAISS)
   llm_review.py         # RAG-augmented LLM review calls (Groq), prompt construction
   main.py                # Entry point wiring it all together
+
+dashboard/              # React + Vite + Tailwind CSS + Convex web dashboard
+  src/
+    components/         # Metric cards, trend chart, run tables, finding detail modal
+    App.tsx             # Main dashboard interface
+convex/                 # Convex backend schemas & mutations (runs, findings, trends, demo seed)
 ```
 
 ## Design notes
