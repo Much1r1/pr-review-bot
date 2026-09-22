@@ -122,7 +122,7 @@ export const getTrendData = query({
 export const clearSeedData = mutation({
   args: {},
   handler: async (ctx) => {
-    const seedRepos = ["Much1r1/e-commerce-api", "Much1r1/auth-service", "test/repo"];
+    const seedRepos = ["test/repo"];
     const rows = await ctx.db.query("runs").collect();
     let deleted = 0;
     for (const row of rows) {
