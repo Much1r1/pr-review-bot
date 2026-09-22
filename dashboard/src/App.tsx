@@ -94,7 +94,7 @@ export default function App() {
           </div>
 
           <div className="flex items-center space-x-3">
-            
+            <a
               href="https://github.com/Much1r1/pr-review-bot"
               target="_blank"
               rel="noreferrer"
