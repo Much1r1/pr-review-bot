@@ -15,7 +15,7 @@ http.route({
 
     const body = await request.json();
 
-    const runId = await ctx.runMutation(api.runs.submitRun, {
+    const runId = await ctx.runMutation(api.runs.saveRunAndFindings, {
       repo: body.repo,
       pr_number: body.pr_number,
       head_sha: body.head_sha,

@@ -1,7 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
-export const submitRun = mutation({
+export const saveRunAndFindings = mutation({
   args: {
     repo: v.string(),
     pr_number: v.number(),
