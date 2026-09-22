@@ -42,23 +42,9 @@ export const submitRun = mutation({
 export const listRepos = query({
   args: {},
   handler: async (ctx) => {
-    const runs = await ctx.db.query("runs").order("desc").collect();
-
-    const latestByRepo = new Map<string, (typeof runs)[number]>();
-    for (const r of runs) {
-      if (!latestByRepo.has(r.repo)) {
-        latestByRepo.set(r.repo, r);
-      }
-    }
-
-    return Array.from(latestByRepo.values()).map((r) => ({
-      repo: r.repo,
-      latest_pr_number: r.pr_number,
-      latest_head_sha: r.head_sha,
-      latest_timestamp: r.timestamp,
-      latest_total_findings: r.total_findings,
-      latest_any_critical: r.any_critical,
-    }));
+    const runs = await ctx.db.query("runs").collect();
+    const repos = [...new Set(runs.map((r) => r.repo))];
+    return repos;
   },
 });
 
