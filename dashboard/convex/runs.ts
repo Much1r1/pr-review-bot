@@ -118,3 +118,19 @@ export const getTrendData = query({
     return results;
   },
 });
+
+export const clearSeedData = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const seedRepos = ["Much1r1/e-commerce-api", "Much1r1/auth-service"];
+    const rows = await ctx.db.query("runs").collect();
+    let deleted = 0;
+    for (const row of rows) {
+      if (seedRepos.includes(row.repo)) {
+        await ctx.db.delete(row._id);
+        deleted++;
+      }
+    }
+    return { deleted };
+  },
+});
